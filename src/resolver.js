@@ -100,7 +100,7 @@ export function cardStatus(schedule, instant) {
       interval,
     };
   }
-  if (next) {
+  if (next && next.date === minskParts(instant).date) {
     const remainingMs = minskInstant(next.date, next.start) - instant;
     return {
       status: "next",
@@ -113,7 +113,7 @@ export function cardStatus(schedule, instant) {
   return {
     status: "none",
     current: [],
-    next: null,
+    next,
     remainingMinutes: null,
     interval: null,
   };

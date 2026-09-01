@@ -118,6 +118,12 @@ test("after term.end card is none with empty next", () => {
   assert.equal(card.remainingMinutes, null);
 });
 
+test("after the last class today status is none but next remains", () => {
+  const card = cardStatus(fixture, new Date("2026-09-01T08:55:00Z")); // 11:55 Minsk
+  assert.equal(card.status, "none");
+  assert.equal(card.next.id, "bjch-oz:2026-09-08");
+});
+
 test("before first class status is next with countdown", () => {
   const card = cardStatus(fixture, new Date("2026-09-01T06:00:00Z")); // 09:00 Minsk
   assert.equal(card.status, "next");
