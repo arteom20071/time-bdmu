@@ -1,0 +1,33 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name example.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+
+    root /var/www/time-bdmu;
+    include /etc/nginx/mime.types;
+    gzip on;
+    gzip_types text/css application/javascript application/json text/javascript;
+
+    location / {
+        try_files $uri $uri/ /public/index.html;
+    }
+
+    location /public/ {
+        alias /var/www/time-bdmu/public/;
+    }
+
+    location /src/ {
+        alias /var/www/time-bdmu/src/;
+    }
+}
