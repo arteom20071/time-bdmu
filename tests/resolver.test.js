@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
 import {
   eventsOn,
   nowEvents,
@@ -122,4 +123,18 @@ test("before first class status is next with countdown", () => {
   assert.equal(card.status, "next");
   assert.equal(card.next.title, "Гист.");
   assert.equal(card.remainingMinutes, 85);
+});
+
+const schedule = JSON.parse(
+  readFileSync(new URL("../public/schedule.json", import.meta.url), "utf8"),
+);
+
+test("production Tuesday 2026-09-01 10:30 is БЖЧ (ОТ) not ОЗ", () => {
+  const hit = eventsOn(schedule, "2026-09-01").filter((e) => e.start === "10:30" && e.kind === "pair");
+  assert.equal(hit.length, 1);
+  assert.equal(hit[0].title, "БЖЧ (ОТ)");
+});
+
+test("production has no events after term.end", () => {
+  assert.equal(eventsOn(schedule, "2027-01-09").length, 0);
 });
