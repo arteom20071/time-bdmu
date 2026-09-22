@@ -17,7 +17,7 @@ python3 -m http.server 4173 --directory .
 
 ## Данные
 
-Расписание — `public/schedule.json`. Исходное фото — `docs/schedule-source.png`. Пересборка дат:
+Расписание — `public/schedule.json`. Пересборка дат:
 
 ```bash
 node scripts/build-schedule.mjs
