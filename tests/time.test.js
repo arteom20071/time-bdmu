@@ -3,7 +3,7 @@ import test from "node:test";
 import { minskParts, hmToMinutes, formatClock, formatDuration } from "../src/time.js";
 
 test("minskParts uses Europe/Minsk not the machine offset", () => {
-  const utc = new Date("2026-09-01T08:02:00Z"); // 11:02 in Minsk (UTC+3)
+  const utc = new Date("2026-09-01T08:02:00Z");
   const p = minskParts(utc);
   assert.equal(p.date, "2026-09-01");
   assert.equal(p.time, "11:02");

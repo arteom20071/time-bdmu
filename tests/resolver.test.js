@@ -67,15 +67,15 @@ test("lecture exists only on listed dates", () => {
 });
 
 test("nowEvents is half-open [start, end)", () => {
-  const during = new Date("2026-09-01T08:30:00Z"); // 11:30 Minsk, lecture already ended
+  const during = new Date("2026-09-01T08:30:00Z");
   assert.equal(nowEvents(fixture, during).length, 1);
   assert.equal(nowEvents(fixture, during)[0].title, "БЖЧ (ОТ)");
-  const atEnd = new Date("2026-09-01T08:55:00Z"); // 11:55 Minsk
+  const atEnd = new Date("2026-09-01T08:55:00Z");
   assert.equal(nowEvents(fixture, atEnd).length, 0);
 });
 
 test("overlapping events both appear in now", () => {
-  const overlap = new Date("2026-09-01T07:30:00Z"); // 10:30 Minsk
+  const overlap = new Date("2026-09-01T07:30:00Z");
   const titles = nowEvents(fixture, overlap).map((e) => e.title).sort();
   assert.deepEqual(titles, ["БЖЧ (ОТ)", "Гист."]);
   const card = cardStatus(fixture, overlap);
@@ -86,7 +86,7 @@ test("overlapping events both appear in now", () => {
 });
 
 test("nextEvent after a class end", () => {
-  const after = new Date("2026-09-01T08:55:00Z"); // 11:55
+  const after = new Date("2026-09-01T08:55:00Z");
   assert.equal(nextEvent(fixture, after).id, "bjch-oz:2026-09-08");
 });
 
@@ -119,13 +119,13 @@ test("after term.end card is none with empty next", () => {
 });
 
 test("after the last class today status is none but next remains", () => {
-  const card = cardStatus(fixture, new Date("2026-09-01T08:55:00Z")); // 11:55 Minsk
+  const card = cardStatus(fixture, new Date("2026-09-01T08:55:00Z"));
   assert.equal(card.status, "none");
   assert.equal(card.next.id, "bjch-oz:2026-09-08");
 });
 
 test("before first class status is next with countdown", () => {
-  const card = cardStatus(fixture, new Date("2026-09-01T06:00:00Z")); // 09:00 Minsk
+  const card = cardStatus(fixture, new Date("2026-09-01T06:00:00Z"));
   assert.equal(card.status, "next");
   assert.equal(card.next.title, "Гист.");
   assert.equal(card.remainingMinutes, 85);
@@ -148,7 +148,7 @@ test("between today's classes reports the full break", () => {
       },
     ],
   };
-  const card = cardStatus(withGap, new Date("2026-09-01T09:00:00Z")); // 12:00 Minsk
+  const card = cardStatus(withGap, new Date("2026-09-01T09:00:00Z"));
   assert.equal(card.status, "next");
   assert.equal(card.next.start, "13:10");
   assert.equal(card.breakMinutes, 75);
