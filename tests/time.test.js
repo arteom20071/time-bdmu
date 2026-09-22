@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { minskParts, hmToMinutes, formatClock } from "../src/time.js";
+import { minskParts, hmToMinutes, formatClock, formatDuration } from "../src/time.js";
 
 test("minskParts uses Europe/Minsk not the machine offset", () => {
   const utc = new Date("2026-09-01T08:02:00Z"); // 11:02 in Minsk (UTC+3)
@@ -25,4 +25,10 @@ test("hmToMinutes parses HH:MM", () => {
 
 test("formatClock is HH:MM in Minsk", () => {
   assert.equal(formatClock(new Date("2026-09-01T08:02:00Z")), "11:02");
+});
+
+test("formatDuration spells hours and minutes in Russian", () => {
+  assert.equal(formatDuration(12), "12 мин");
+  assert.equal(formatDuration(60), "1 ч");
+  assert.equal(formatDuration(75), "1 ч 15 мин");
 });

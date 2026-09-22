@@ -40,3 +40,11 @@ export function hmToMinutes(hm) {
 export function formatClock(date) {
   return minskParts(date).time;
 }
+
+export function formatDuration(mins) {
+  const n = Math.max(0, Math.floor(mins));
+  if (n < 60) return `${n} мин`;
+  const h = Math.floor(n / 60);
+  const m = n % 60;
+  return m ? `${h} ч ${m} мин` : `${h} ч`;
+}

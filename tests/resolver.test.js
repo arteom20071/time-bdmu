@@ -129,6 +129,30 @@ test("before first class status is next with countdown", () => {
   assert.equal(card.status, "next");
   assert.equal(card.next.title, "Гист.");
   assert.equal(card.remainingMinutes, 85);
+  assert.equal(card.breakMinutes, null);
+});
+
+test("between today's classes reports the full break", () => {
+  const withGap = {
+    ...fixture,
+    series: [
+      ...fixture.series,
+      {
+        id: "later",
+        dates: ["2026-09-01"],
+        start: "13:10",
+        end: "14:35",
+        title: "Гист.",
+        kind: "pair",
+        place: null,
+      },
+    ],
+  };
+  const card = cardStatus(withGap, new Date("2026-09-01T09:00:00Z")); // 12:00 Minsk
+  assert.equal(card.status, "next");
+  assert.equal(card.next.start, "13:10");
+  assert.equal(card.breakMinutes, 75);
+  assert.equal(card.remainingMinutes, 70);
 });
 
 const schedule = JSON.parse(

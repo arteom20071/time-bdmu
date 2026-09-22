@@ -1,4 +1,4 @@
-import { formatClock, hmToMinutes, minskParts } from "../src/time.js";
+import { formatClock, formatDuration, hmToMinutes, minskParts } from "../src/time.js";
 import { cardStatus, eventsOn, nowEvents, shiftWeek, weekOf } from "../src/resolver.js";
 
 const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
@@ -25,6 +25,8 @@ let schedule;
 let tab = 0;
 let week;
 let lastDate = "";
+let lastPaint = "";
+let lastRemaining = null;
 let dragging = false;
 let startX = 0;
 let startT = 0;
@@ -44,32 +46,41 @@ function eventLine(event) {
   return `${event.title}${place}`;
 }
 
-function renderStatus(instant) {
+function paintKey(instant) {
   const card = cardStatus(schedule, instant);
-  const compactLeft = els.status.classList.contains("is-compact");
+  const { date } = minskParts(instant);
+  const nowIds = nowEvents(schedule, instant)
+    .map((e) => e.id)
+    .join("|");
+  return {
+    card,
+    date,
+    nowIds,
+    key: `${date}|${card.status}|${nowIds}|${card.next?.id ?? ""}|${els.status.classList.contains("is-compact") ? "c" : ""}`,
+  };
+}
+
+function fillStatus(card) {
+  const compact = els.status.classList.contains("is-compact");
   els.status.classList.toggle("is-quiet", card.status !== "now");
   if (card.status === "now") {
     const names = card.current.map((e) => e.title).join(" · ");
     els.status.innerHTML = `
-      <p class="slab-kicker">Сейчас · ещё ${card.remainingMinutes} мин</p>
-      <h1 class="slab-title">${names}${compactLeft ? `<span class="slab-time">ещё ${card.remainingMinutes} мин</span>` : ""}</h1>
+      <p class="slab-kicker" data-role="kicker">Сейчас · ещё ${card.remainingMinutes} мин</p>
+      <h1 class="slab-title">${names}${compact ? `<span class="slab-time">ещё ${card.remainingMinutes} мин</span>` : ""}</h1>
       <p class="slab-time">${card.interval.start}–${card.interval.end}</p>
     `;
     return;
   }
   if (card.status === "next") {
+    const kicker = card.breakMinutes != null
+      ? `Перерыв · ещё ${card.remainingMinutes} мин`
+      : `Дальше · через ${card.remainingMinutes} мин`;
+    const total = card.breakMinutes != null ? `${formatDuration(card.breakMinutes)} · ` : "";
     els.status.innerHTML = `
-      <p class="slab-kicker">Дальше · через ${card.remainingMinutes} мин</p>
+      <p class="slab-kicker" data-role="kicker">${kicker}</p>
       <h1 class="slab-title">${card.next.title}</h1>
-      <p class="slab-meta">в ${card.next.start}</p>
-    `;
-    return;
-  }
-  if (card.next) {
-    els.status.innerHTML = `
-      <p class="slab-kicker">Пар нет</p>
-      <h1 class="slab-title">${card.next.title}</h1>
-      <p class="slab-meta">${prettyDate(card.next.date)} · ${card.next.start}</p>
+      <p class="slab-meta">${total}в ${card.next.start}</p>
     `;
     return;
   }
@@ -79,20 +90,36 @@ function renderStatus(instant) {
   `;
 }
 
+function updateRemaining(card) {
+  const kicker = els.status.querySelector("[data-role=kicker]");
+  if (!kicker) return;
+  if (card.status === "now") kicker.textContent = `Сейчас · ещё ${card.remainingMinutes} мин`;
+  if (card.status === "next") {
+    kicker.textContent = card.breakMinutes != null
+      ? `Перерыв · ещё ${card.remainingMinutes} мин`
+      : `Дальше · через ${card.remainingMinutes} мин`;
+  }
+  const compactTime = els.status.querySelector(".slab-title .slab-time");
+  if (compactTime) compactTime.textContent = `ещё ${card.remainingMinutes} мин`;
+}
+
 function renderTodayList(instant) {
   const { date } = minskParts(instant);
   const nowIds = new Set(nowEvents(schedule, instant).map((e) => e.id));
   const minutes = minskParts(instant).minutes;
   const events = eventsOn(schedule, date);
-  els.list.innerHTML = events
+  const wd = weekdayOf(date);
+  const heading = `<li class="day-heading">${DAYS[wd] || "Выходной"} · ${prettyDate(date)}</li>`;
+  const rows = events
     .map((event, i) => {
       const end = hmToMinutes(event.end);
       const cls = nowIds.has(event.id) ? "is-now" : minutes >= end ? "is-past" : "is-future";
       const place = event.kind === "lecture" && event.place ? `<span class="row-place">${event.place}</span>` : "";
-      return `<li class="row ${cls}" style="--i:${Math.min(i, 4)}"><span class="row-time">${event.start}</span><span>${event.title}${place}</span></li>`;
+      return `<li class="row ${cls}" style="--i:${Math.min(i, 4)}"><span class="row-time">${event.start}–${event.end}</span><span>${event.title}${place}</span></li>`;
     })
     .join("");
-  if (!events.length) els.list.innerHTML = "";
+  els.list.innerHTML = heading + rows;
+  requestAnimationFrame(() => els.list.classList.add("is-settled"));
 }
 
 function renderWeek(instant) {
@@ -107,7 +134,7 @@ function renderWeek(instant) {
       const isToday = dateStr === today;
       const events = eventsOn(schedule, dateStr);
       const rows = events
-        .map((event) => `<p class="row"><span class="row-time">${event.start}</span><span>${eventLine(event)}</span></p>`)
+        .map((event) => `<p class="row"><span class="row-time">${event.start}–${event.end}</span><span>${eventLine(event)}</span></p>`)
         .join("");
       const todayMark = isToday ? " · сегодня" : ` · ${prettyDate(dateStr)}`;
       return `<section class="day${isToday ? " is-today" : ""}" data-date="${dateStr}"><h2 class="day-name">${DAYS[wd]}${todayMark}</h2>${rows}</section>`;
@@ -118,9 +145,11 @@ function renderWeek(instant) {
 }
 
 function scrollTodayIntoWeek() {
+  const page = document.getElementById("page-week");
+  if (!page) return;
   const today = minskParts(new Date()).date;
-  const node = els.weekStack.querySelector(`[data-date="${today}"]`) || els.weekStack.querySelector(".day");
-  node?.scrollIntoView({ block: "start", behavior: reduceMotion() ? "auto" : "smooth" });
+  const node = els.weekStack.querySelector(`[data-date="${today}"]`);
+  page.scrollTop = node ? Math.max(0, node.offsetTop - 8) : 0;
 }
 
 function setTab(next, { animate = true } = {}) {
@@ -134,20 +163,37 @@ function setTab(next, { animate = true } = {}) {
     els.track.style.transition = `transform 320ms ${EASE}`;
     els.track.style.transform = `translateX(${x}%)`;
   }
+  if (tab === 0) {
+    els.pageToday.scrollTop = 0;
+    els.status.classList.remove("is-compact");
+    window.scrollTo(0, 0);
+  }
   if (tab === 1) requestAnimationFrame(scrollTodayIntoWeek);
 }
 
 function tick() {
   const instant = new Date();
-  const parts = minskParts(instant);
+  const { card, date, key } = paintKey(instant);
   els.clock.textContent = formatClock(instant);
-  if (parts.date !== lastDate) {
-    lastDate = parts.date;
-    week = weekOf(parts.date);
+
+  if (date !== lastDate) {
+    lastDate = date;
+    week = weekOf(date);
     renderWeek(instant);
   }
-  renderStatus(instant);
-  renderTodayList(instant);
+
+  if (key !== lastPaint) {
+    lastPaint = key;
+    fillStatus(card);
+    renderTodayList(instant);
+    lastRemaining = card.remainingMinutes;
+    return;
+  }
+
+  if (card.remainingMinutes !== lastRemaining) {
+    lastRemaining = card.remainingMinutes;
+    updateRemaining(card);
+  }
 }
 
 function bindSwipe() {
@@ -240,11 +286,6 @@ function slideWeek(delta) {
   );
 }
 
-els.pageToday.addEventListener("scroll", () => {
-  els.status.classList.toggle("is-compact", els.pageToday.scrollTop > 24);
-  tick();
-});
-
 els.tabs.forEach((btn) => btn.addEventListener("click", () => setTab(Number(btn.dataset.tab))));
 els.weekPrev.addEventListener("click", () => slideWeek(-1));
 els.weekNext.addEventListener("click", () => slideWeek(1));
@@ -253,6 +294,6 @@ const data = await fetch("./schedule.json").then((r) => r.json());
 schedule = data;
 week = weekOf(minskParts(new Date()).date);
 bindSwipe();
-setTab(0, { animate: false });
+setTab(location.hash === "#week" ? 1 : 0, { animate: false });
 tick();
 setInterval(tick, 1000);

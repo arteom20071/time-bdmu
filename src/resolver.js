@@ -97,16 +97,25 @@ export function cardStatus(schedule, instant) {
       current,
       next,
       remainingMinutes: Math.max(0, Math.floor(remainingMs / 60000)),
+      breakMinutes: null,
       interval,
     };
   }
   if (next && next.date === minskParts(instant).date) {
     const remainingMs = minskInstant(next.date, next.start) - instant;
+    const { date, minutes } = minskParts(instant);
+    const ended = eventsOn(schedule, date).filter((e) => hmToMinutes(e.end) <= minutes);
+    let breakMinutes = null;
+    if (ended.length) {
+      const prevEnd = Math.max(...ended.map((e) => hmToMinutes(e.end)));
+      breakMinutes = Math.max(0, hmToMinutes(next.start) - prevEnd);
+    }
     return {
       status: "next",
       current: [],
       next,
       remainingMinutes: Math.max(0, Math.floor(remainingMs / 60000)),
+      breakMinutes,
       interval: null,
     };
   }
@@ -115,6 +124,7 @@ export function cardStatus(schedule, instant) {
     current: [],
     next,
     remainingMinutes: null,
+    breakMinutes: null,
     interval: null,
   };
 }
